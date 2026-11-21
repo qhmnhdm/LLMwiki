@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG（檢索增強生成）新手完全入門 — 日式可愛風 LLM Wiki 教學簡報</title>
+  <style>
+    :root {
+      --bg: #fff9f2;
+      --paper: #fffdf9;
+      --cocoa: #4a3831;
+      --cocoa-soft: #7c675e;
+      --sakura: #ff8fab;
+      --sakura-soft: #ffe5ec;
+      --matcha: #68b896;
+      --matcha-soft: #e6f7ef;
+      --butter: #f6bd60;
+      --butter-soft: #fff4d6;
+      --sky: #72b5e8;
+      --sky-soft: #e6f4ff;
+      --lavender: #b39ddb;
+      --lavender-soft: #f1ebff;
+      --border: #f0dfd1;
+      --danger: #e57373;
+      --danger-soft: #ffebee;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "Rounded Mplus 1c", "Microsoft JhengHei", system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(#f3d7c3 1.2px, transparent 1.2px),
+        radial-gradient(#ffe0e9 1.2px, var(--bg) 1.2px);
+      background-size: 28px 28px;
+      background-position: 0 0, 14px 14px;
+      color: var(--cocoa);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Floating Sakura Petals Background */
+    .sakura-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .petal {
+      position: absolute;
+      top: -30px;
+      width: 14px;
+      height: 14px;
+      background: #ffb3c6;
+      border-radius: 80% 0 80% 20%;
+      opacity: 0.45;
+      animation: fall linear infinite;
+    }
+    .petal:nth-child(1) { left: 8%; animation-duration: 13s; animation-delay: 0s; }
+    .petal:nth-child(2) { left: 22%; animation-duration: 16s; animation-delay: 2s; width: 11px; height: 11px; background: #ffd166; border-radius: 50%; }
+    .petal:nth-child(3) { left: 39%; animation-duration: 14s; animation-delay: 4s; }
+    .petal:nth-child(4) { left: 61%; animation-duration: 18s; animation-delay: 1s; width: 16px; height: 16px; }
+    .petal:nth-child(5) { left: 78%; animation-duration: 15s; animation-delay: 3s; background: #a8e6cf; }
+    .petal:nth-child(6) { left: 91%; animation-duration: 12s; animation-delay: 5s; }
+
+    @keyframes fall {
+      0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }
+      15% { opacity: 0.5; }
+      85% { opacity: 0.45; }
+      100% { transform: translateY(105vh) translateX(40px) rotate(320deg); opacity: 0; }
+    }
+
+    /* Cute Keyframe Micro-Animations */
+    @keyframes floatY {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      96% { transform: scaleY(0.1); }
+    }
+    @keyframes sparkle {
+      0%, 100% { transform: scale(0.85) rotate(0deg); opacity: 0.6; }
+      50% { transform: scale(1.2) rotate(18deg); opacity: 1; }
+    }
+    @keyframes pulseArrow {
+      0%, 100% { transform: translateX(0); opacity: 0.65; }
+      50% { transform: translateX(4px); opacity: 1; }
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes bounceChunk {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes celebratePop {
+      0% { transform: scale(0.5); opacity: 0; }
+      40% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1) translateY(-18px); opacity: 0; }
+    }
+
+    .anim-float { animation: floatY 3.2s ease-in-out infinite; }
+    .anim-wiggle { animation: wiggle 2.8s ease-in-out infinite; transform-origin: center; }
+    .anim-sparkle { animation: sparkle 2.2s ease-in-out infinite; transform-origin: center; }
+    .anim-blink { animation: blink 4s infinite; transform-origin: center; }
+
+    /* Progress Bar (Strawberry Cream) */
+    .progress-bar {
+      height: 7px;
+      background: #fae8dc;
+      width: 100%;
+      position: relative;
+      z-index: 5;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 8.33%;
+      border-radius: 0 999px 999px 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        #ff8fab,
+        #ff8fab 10px,
+        #ffb3c6 10px,
+        #ffb3c6 20px
+      );
+      transition: width 0.3s ease;
+    }
+
+    /* Top Bar */
+    .topbar {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 28px;
+      background: rgba(255, 253, 249, 0.9);
+      border-bottom: 2px dashed var(--border);
+      font-size: 0.92rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      color: var(--cocoa);
+    }
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--sakura);
+      box-shadow: 0 0 0 4px var(--sakura-soft);
+    }
+    .brand span.tag {
+      font-size: 0.76rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--matcha-soft);
+      border: 1.5px solid var(--matcha);
+      color: #2f7d5d;
+      font-weight: 700;
+    }
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      color: var(--cocoa-soft);
+    }
+    .btn {
+      background: var(--paper);
+      color: var(--cocoa);
+      border: 2px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 700;
+      box-shadow: 0 3px 0 #ebd6c5;
+      transition: all 0.15s ease;
+    }
+    .btn:hover {
+      border-color: var(--sakura);
+      background: var(--sakura-soft);
+      color: #c94c6d;
+      transform: translateY(-1px);
+    }
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #ebd6c5;
+    }
+
+    /* Stage */
+    .stage {
+      flex: 1;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 36px;
+      overflow-y: auto;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1050px;
+      min-height: 545px;
+      background: var(--paper);
+      border: 3px solid #f2dfd0;
+      border-radius: 28px;
+      padding: 34px 44px 66px;
+      box-shadow:
+        0 14px 34px rgba(133, 94, 66, 0.10),
+        0 6px 0 #f3e1d3;
+      position: relative;
+      animation: popIn 0.28s ease;
+    }
+    .slide.active { display: flex; flex-direction: column; justify-content: center; }
+
+    /* Decorative Washi Tape at top of slide */
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-1.5deg);
+      width: 110px;
+      height: 22px;
+      background: rgba(255, 179, 198, 0.55);
+      border-radius: 4px;
+      border-left: 2px dashed rgba(255, 255, 255, 0.7);
+      border-right: 2px dashed rgba(255, 255, 255, 0.7);
+    }
+
+    .slide-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #c94c6d;
+      background: var(--sakura-soft);
+      padding: 4px 14px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+    .slide h1 {
+      font-size: 2.35rem;
+      line-height: 1.3;
+      margin-bottom: 14px;
+      color: var(--cocoa);
+    }
+    .slide h1 .accent-word {
+      color: #e0577c;
+      background: linear-gradient(transparent 62%, #ffe0ea 62%);
+      padding: 0 4px;
+    }
+    .slide h2 {
+      font-size: 1.75rem;
+      margin-bottom: 12px;
+      color: var(--cocoa);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .lead {
+      font-size: 1.02rem;
+      color: var(--cocoa-soft);
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    /* Cover Hero */
+    .hero-wrap {
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .mascot-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #fff4e8, #ffeef3);
+      border: 2.5px dashed #f5c6d3;
+      border-radius: 24px;
+      padding: 18px;
+    }
+    .mascot-caption {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #c94c6d;
+      background: #fff;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1.5px solid #ffd6e0;
+    }
+
+    /* Layouts */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    .card {
+      background: #fffaf4;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 4px 0 #f2e2d4;
+    }
+    .card h3 {
+      font-size: 1.04rem;
+      margin-bottom: 8px;
+      color: var(--cocoa);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p, .card li {
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--cocoa-soft);
+    }
+    .card ul { padding-left: 18px; }
+    .card li { margin-bottom: 5px; }
+
+    .card.sakura { background: var(--sakura-soft); border-color: #ffc2d4; box-shadow: 0 4px 0 #f7c5d3; }
+    .card.matcha { background: var(--matcha-soft); border-color: #b7e4cf; box-shadow: 0 4px 0 #bfe6d4; }
+    .card.butter { background: var(--butter-soft); border-color: #f7d996; box-shadow: 0 4px 0 #f3d796; }
+    .card.sky { background: var(--sky-soft); border-color: #badff9; box-shadow: 0 4px 0 #c2e1f7; }
+    .card.lavender { background: var(--lavender-soft); border-color: #d7c9f2; box-shadow: 0 4px 0 #d9cdf2; }
+
+    /* Pipeline Steps */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      margin: 14px 0 18px;
+    }
+    .step-box {
+      flex: 1;
+      background: #fffaf5;
+      border: 2px solid #f1d9c8;
+      border-radius: 20px;
+      padding: 14px 12px;
+      text-align: center;
+      box-shadow: 0 4px 0 #f2dfd0;
+    }
+    .step-icon {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: var(--butter-soft);
+    }
+    .step-box:nth-child(3) .step-icon { background: var(--sakura-soft); }
+    .step-box:nth-child(5) .step-icon { background: var(--lavender-soft); }
+    .step-box:nth-child(7) .step-icon { background: var(--matcha-soft); }
+    .step-box h4 { font-size: 0.96rem; margin-bottom: 5px; color: var(--cocoa); }
+    .step-box p { font-size: 0.83rem; color: var(--cocoa-soft); line-height: 1.5; }
+    .arrow {
+      display: flex;
+      align-items: center;
+      font-size: 1.4rem;
+      color: var(--sakura);
+      font-weight: 900;
+      animation: pulseArrow 1.8s ease-in-out infinite;
+    }
+
+    /* Cute Chunk Visual */
+    .chunk-demo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .chunk-pill {
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 2px solid;
+      animation: bounceChunk 2.6s ease-in-out infinite;
+    }
+    .chunk-pill.c1 { background: #fff; border-color: var(--sky); color: #3678ad; }
+    .chunk-pill.ov { background: var(--butter-soft); border-color: var(--butter); color: #9c6a12; animation-delay: 0.3s; }
+    .chunk-pill.c2 { background: #fff; border-color: var(--matcha); color: #2f7d5d; animation-delay: 0.6s; }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.88rem;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+    }
+    th, td {
+      border-bottom: 1.5px solid var(--border);
+      border-right: 1.5px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      line-height: 1.5;
+    }
+    th:last-child, td:last-child { border-right: none; }
+    tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--sakura-soft);
+      color: #a63d5a;
+      font-weight: 800;
+    }
+    td { background: #fffdf9; color: var(--cocoa); }
+    td.wiki-col { background: var(--matcha-soft); font-weight: 700; color: #266a4e; }
+
+    /* Code pill */
+    code {
+      font-family: Consolas, monospace;
+      background: #f8ece3;
+      color: #b54564;
+      padding: 2px 7px;
+      border-radius: 8px;
+      font-size: 0.86em;
+    }
+
+    /* Wiki Source Badge */
+    .wiki-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 44px;
+      right: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--cocoa-soft);
+      border-top: 2px dashed var(--border);
+      padding-top: 10px;
+    }
+    .wiki-badge code {
+      background: var(--matcha-soft);
+      color: #266a4e;
+      border: 1px solid #b7e4cf;
+    }
+
+    /* TOC Drawer */
+    .toc-drawer {
+      position: fixed;
+      top: 58px;
+      right: 26px;
+      width: 330px;
+      max-height: 74vh;
+      overflow-y: auto;
+      background: var(--paper);
+      border: 2.5px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 16px 36px rgba(133, 94, 66, 0.16);
+      display: none;
+      z-index: 30;
+    }
+    .toc-drawer.open { display: block; }
+    .toc-drawer h4 { margin-bottom: 10px; color: #c94c6d; font-size: 0.95rem; }
+    .toc-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--cocoa);
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .toc-item:hover, .toc-item.active {
+      background: var(--sakura-soft);
+      color: #b53f60;
+    }
+
+    /* Quiz */
+    .quiz-item {
+      background: #fffaf5;
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .quiz-q { font-weight: 800; margin-bottom: 8px; font-size: 0.93rem; color: var(--cocoa); }
+    .quiz-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .quiz-opt {
+      background: #fff;
+      color: var(--cocoa);
+      border: 2px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+    .quiz-opt:hover { border-color: var(--sakura); background: var(--sakura-soft); }
+    .quiz-opt.correct { border-color: var(--matcha); background: var(--matcha-soft); color: #24664b; }
+    .quiz-opt.wrong { border-color: var(--danger); background: var(--danger-soft); color: #b73838; }
+    .quiz-feedback { margin-top: 7px; font-size: 0.84rem; font-weight: 700; min-height: 20px; }
+    .spark-burst {
+      position: absolute;
+      right: 18px;
+      top: 10px;
+      font-size: 1.2rem;
+      pointer-events: none;
+      animation: celebratePop 0.9s ease forwards;
+    }
+
+    /* Corner Mini Shiba Helper */
+    .mini-helper {
+      position: fixed;
+      right: 22px;
+      bottom: 66px;
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      cursor: pointer;
+    }
+    .helper-bubble {
+      background: #fff;
+      border: 2px solid #f7c5d3;
+      color: #b54564;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      box-shadow: 0 4px 10px rgba(201, 76, 109, 0.12);
+      opacity: 0;
+      transform: translateY(6px);
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    .mini-helper:hover .helper-bubble {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .mini-helper:hover svg {
+      transform: translateY(-6px) rotate(-5deg);
+    }
+    .mini-helper svg {
+      transition: transform 0.2s ease;
+      filter: drop-shadow(0 4px 6px rgba(133, 94, 66, 0.15));
+    }
+
+    /* Footer Navigation */
+    .footer-nav {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 24px;
+      border-top: 2px dashed var(--border);
+      background: rgba(255, 253, 249, 0.92);
+      font-size: 0.9rem;
+    }
+    .hint { color: var(--cocoa-soft); font-size: 0.8rem; font-weight: 600; }
+
+    @media (max-width: 840px) {
+      .hero-wrap, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .pipeline { flex-direction: column; }
+      .arrow { justify-content: center; transform: rotate(90deg); animation: none; }
+      .slide { padding: 26px 22px 66px; }
+      .wiki-badge { left: 22px; right: 22px; flex-direction: column; gap: 4px; align-items: flex-start; }
+      .mini-helper { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating Sakura Background -->
+  <div class="sakura-layer" aria-hidden="true">
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>RAG 日式小教室</span>
+      <span class="tag">LLM Wiki 知識庫驅動</span>
+    </div>
+    <div class="topbar-controls">
+      <span id="pageCounter">1 / 12</span>
+      <button class="btn" id="tocBtn" type="button">目錄導覽</button>
+    </div>
+  </header>
+
+  <aside class="toc-drawer" id="tocDrawer">
+    <h4>投影片目錄（點擊跳轉）</h4>
+    <div id="tocList"></div>
+  </aside>
+
+  <main class="stage">
+    <!-- Slide 1 -->
+    <section class="slide active" data-slide="1" data-title="封面：RAG 新手完全入門" data-wiki-source="wiki/index.md">
+      <div class="hero-wrap">
+        <div>
+          <div class="slide-kicker">LLM Wiki 教學簡報 · 第十週作業</div>
+          <h1><span class="accent-word">RAG</span>（檢索增強生成）<br />新手完全入門小教室</h1>
+          <p class="lead">
+            不用怕數學公式！跟著柴犬小書童，10 分鐘輕鬆看懂：為什麼 AI 需要「開書考試」、RAG 怎麼運作，以及它和 <strong>LLM Wiki</strong> 有什麼不同。
+          </p>
+        </div>
+        <!-- Animated Kawaii Shiba Librarian SVG -->
+        <div class="mascot-stage">
+          <svg class="anim-float" width="170" height="150" viewBox="0 0 180 160" aria-label="柴犬 AI 小書童">
+            <!-- Sparkles -->
+            <g class="anim-sparkle" fill="#f6bd60">
+              <path d="M25 28 L28 36 L36 39 L28 42 L25 50 L22 42 L14 39 L22 36 Z" />
+              <path d="M155 22 L157 28 L163 30 L157 32 L155 38 L153 32 L147 30 L153 28 Z" />
+            </g>
+            <!-- Ears -->
+            <path d="M46 56 L36 22 L70 40 Z" fill="#e6a15c" stroke="#4a3831" stroke-width="3" stroke-linejoin="round" />
+            <path d="M47 48 L43 31 L60 40 Z" fill="#ffd6e0" />
+            <path d="M134 56 L144 22 L110 40 Z" fill="#e6a15c" stroke="#4a3831" stroke-width="3" stroke-linejoin="round" />
+            <path d="M133 48 L137 31 L120 40 Z" fill="#ffd6e0" />
+            <!-- Head -->
+            <ellipse cx="90" cy="76" rx="50" ry="42" fill="#f0b272" stroke="#4a3831" stroke-width="3" />
+            <!-- White Cheeks -->
+            <path d="M44 82 Q60 66 90 78 Q120 66 136 82 Q132 114 90 117 Q48 114 44 82 Z" fill="#fffaf4" />
+            <!-- Eyebrows -->
+            <ellipse cx="72" cy="60" rx="5" ry="3.5" fill="#fffaf4" />
+            <ellipse cx="108" cy="60" rx="5" ry="3.5" fill="#fffaf4" />
+            <!-- Blinking Eyes -->
+            <g class="anim-blink">
+              <circle cx="71" cy="74" r="5" fill="#4a3831" />
+              <circle cx="72.5" cy="72.5" r="1.7" fill="#ffffff" />
+              <circle cx="109" cy="74" r="5" fill="#4a3831" />
+              <circle cx="110.5" cy="72.5" r="1.7" fill="#ffffff" />
+            </g>
+            <!-- Blush -->
+            <ellipse cx="56" cy="85" rx="7" ry="4" fill="#ffb3c6" opacity="0.8" />
+            <ellipse cx="124" cy="85" rx="7" ry="4" fill="#ffb3c6" opacity="0.8" />
+            <!-- Nose & Smile -->
+            <ellipse cx="90" cy="83" rx="5" ry="3.5" fill="#4a3831" />
+            <path d="M83 90 Q90 96 97 90" fill="none" stroke="#4a3831" stroke-width="2.6" stroke-linecap="round" />
+            <!-- Little Book -->
+            <g transform="translate(55, 108)">
+              <rect x="0" y="6" width="70" height="34" rx="8" fill="#89c4f4" stroke="#4a3831" stroke-width="3" />
+              <line x1="35" y1="6" x2="35" y2="40" stroke="#4a3831" stroke-width="2.5" />
+              <line x1="10" y1="18" x2="27" y2="18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="10" y1="26" x2="24" y2="26" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="43" y1="18" x2="60" y2="18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="43" y1="26" x2="56" y2="26" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+            </g>
+          </svg>
+          <div class="mascot-caption">柴犬 AI 小書童：一起翻書學習吧！</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card sakura">
+          <h3>1. 基礎直覺</h3>
+          <p>純 LLM 三大痛點與「閉書 vs. 開書考試」可愛類比。</p>
+        </div>
+        <div class="card butter">
+          <h3>2. 原理與架構</h3>
+          <p>吐司切塊、語意座標與離線／線上雙階段流程。</p>
+        </div>
+        <div class="card matcha">
+          <h3>3. 進階與選型</h3>
+          <p>Hybrid Search、Rerank、RAGAS 與 LLM Wiki 對照。</p>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/index.md</code></span>
+        <span>原始資料：raw/01 ～ raw/05</span>
+      </div>
+    </section>
+
+    <!-- Slide 2 -->
+    <section class="slide" data-slide="2" data-title="為什麼純 LLM 還不夠？" data-wiki-source="wiki/concepts/what-is-rag.md">
+      <div class="slide-kicker">Part 1 · 核心動機</div>
+      <h2>
+        <svg class="anim-wiggle" width="32" height="32" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="15" fill="#fff4d6" stroke="#f6bd60" stroke-width="2.5" />
+          <text x="18" y="24" text-anchor="middle" font-size="18" font-weight="800" fill="#c97a16">?</text>
+        </svg>
+        為什麼不能直接問純 LLM 就好？
+      </h2>
+      <p class="lead">大型語言模型（LLM）雖然很會聊天，但如果只靠模型自己回答專業知識，會遇到三個常見煩惱：</p>
+      <div class="grid-3">
+        <div class="card butter">
+          <h3>1. 知識過期（Static）</h3>
+          <p>模型的知識停在訓練結束那一刻。想讓它學會昨天的新規定，重新訓練一次的費用與時間都非常高。</p>
+        </div>
+        <div class="card sakura">
+          <h3>2. 幻覺問題（Hallucination）</h3>
+          <p>遇到忘記或沒學過的題目時，模型不會停下來查證，反而容易憑機率「一本正經地胡說八道」。</p>
+        </div>
+        <div class="card lavender">
+          <h3>3. 沒看過私有資料</h3>
+          <p>通用模型不知道公司內部手冊或個人筆記，也沒辦法明確指出回答是參考哪份文件的哪一段。</p>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/what-is-rag.md</code></span>
+        <span>原始資料：raw/01_rag_original_paper.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 3 -->
+    <section class="slide" data-slide="3" data-title="什麼是 RAG？開書考試類比" data-wiki-source="wiki/concepts/what-is-rag.md">
+      <div class="slide-kicker">Part 1 · 核心概念</div>
+      <h2>
+        <svg class="anim-float" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="5" y="10" width="30" height="22" rx="5" fill="#e6f7ef" stroke="#68b896" stroke-width="2.5" />
+          <line x1="20" y1="10" x2="20" y2="32" stroke="#68b896" stroke-width="2.5" />
+          <circle cx="20" cy="6" r="3" fill="#f6bd60" />
+        </svg>
+        什麼是 RAG？一句話：讓 AI「開書考試」
+      </h2>
+      <p class="lead">
+        <strong>RAG（Retrieval-Augmented Generation，檢索增強生成）</strong>由 Meta AI（Lewis et al., 2020）提出：在回答前，先去外部書架「找資料」，再把查到的段落交給 LLM 整理作答。
+      </p>
+      <div class="grid-2">
+        <div class="card sakura">
+          <h3>純 LLM ＝ 閉書考試</h3>
+          <ul>
+            <li>只靠<strong>參數記憶（Parametric Memory）</strong>，也就是背在模型權重裡的舊記憶。</li>
+            <li>忘記細節時容易用猜的，產生幻覺。</li>
+            <li>沒辦法隨時替換最新資料。</li>
+          </ul>
+        </div>
+        <div class="card matcha">
+          <h3>RAG ＝ 開書考試</h3>
+          <ul>
+            <li>結合 LLM 的<strong>參數記憶</strong>（理解與表達）＋ 外部<strong>非參數記憶</strong>（可隨時更新的文件庫）。</li>
+            <li>先翻書找證據，再整理出有憑有據的答案。</li>
+            <li>更新知識只需換資料庫，不需重訓模型（Hot-swappable）。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/what-is-rag.md</code></span>
+        <span>原始資料：raw/01_rag_original_paper.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 4 -->
+    <section class="slide" data-slide="4" data-title="底層原理 I：Text Chunking" data-wiki-source="wiki/concepts/chunking-and-embeddings.md">
+      <div class="slide-kicker">Part 2 · 底層原理 I</div>
+      <h2>第一步：把厚文件切成「小吐司塊（Chunking）」</h2>
+      <p class="lead">直接把整本 100 頁 PDF 塞進模型既太長又找不到重點，所以我們要先把文件切成好消化的小段落（Chunks）。</p>
+      <div class="grid-2">
+        <div class="card sky">
+          <h3>切塊（Text Chunking）的用意</h3>
+          <ul>
+            <li><strong>不撐爆視窗</strong>：避免超出 LLM Context Window，也能省下大量 Token。</li>
+            <li><strong>檢索更精準</strong>：每塊約 300～800 tokens，聚焦單一小主題。</li>
+            <li><strong>保留 Metadata</strong>：同步記錄檔名、頁碼、章節，方便最後標註來源。</li>
+          </ul>
+        </div>
+        <div class="card butter">
+          <h3>貼心設計：Chunk Overlap（重疊）</h3>
+          <p>相鄰兩塊保留 <strong>10%～20% 重疊文字</strong>（約 50～100 tokens），避免重要句子剛好被切在邊界而斷章取義。</p>
+          <div class="chunk-demo">
+            <span class="chunk-pill c1">Chunk 1 前半段</span>
+            <span class="chunk-pill ov">10~20% 重疊區</span>
+            <span class="chunk-pill c2">Chunk 2 後半段</span>
+          </div>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/chunking-and-embeddings.md</code></span>
+        <span>原始資料：raw/02_embeddings_and_vector_db.md, raw/03</span>
+      </div>
+    </section>
+
+    <!-- Slide 5 -->
+    <section class="slide" data-slide="5" data-title="底層原理 II：Embedding 與向量庫" data-wiki-source="wiki/concepts/chunking-and-embeddings.md">
+      <div class="slide-kicker">Part 2 · 底層原理 II</div>
+      <h2>電腦怎麼懂語意？Embedding 與向量資料庫</h2>
+      <p class="lead">傳統搜尋只看「字一不一樣」，RAG 透過 Embedding 把文字的「意思」變成座標，讓意思相近的句子住在一起！</p>
+      <div class="grid-3">
+        <div class="card lavender">
+          <h3>1. Embedding 向量</h3>
+          <p>將文字轉成高維數字座標（如 768 或 1536 維）。語意相近的句子距離非常近。</p>
+          <svg width="100%" height="66" viewBox="0 0 220 66" style="margin-top:8px;" aria-label="語意泡泡示意圖">
+            <line x1="62" y1="34" x2="146" y2="28" stroke="#ff8fab" stroke-width="2.5" stroke-dasharray="5 4" />
+            <g class="anim-float">
+              <rect x="6" y="18" width="96" height="30" rx="15" fill="#fff" stroke="#b39ddb" stroke-width="2" />
+              <text x="54" y="37" text-anchor="middle" font-size="11" font-weight="700" fill="#4a3831">幫手機充電</text>
+            </g>
+            <g class="anim-float" style="animation-delay:0.5s;">
+              <rect x="112" y="12" width="102" height="30" rx="15" fill="#fff" stroke="#ff8fab" stroke-width="2" />
+              <text x="163" y="31" text-anchor="middle" font-size="11" font-weight="700" fill="#4a3831">電池補充方式</text>
+            </g>
+          </svg>
+        </div>
+        <div class="card sky">
+          <h3>2. 餘弦相似度</h3>
+          <p>計算問題向量與文件向量的夾角餘弦值（範圍 -1 到 1）。數值越接近 <strong>1</strong>，代表意思越契合！</p>
+        </div>
+        <div class="card matcha">
+          <h3>3. 向量資料庫</h3>
+          <p>如 Chroma、FAISS、Pinecone、Milvus。運用 <strong>ANN（如 HNSW）</strong> 演算法，在毫秒內從百萬片段撈出 Top-K。</p>
+        </div>
+      </div>
+      <div class="card sakura" style="margin-top: 14px; padding: 12px 18px;">
+        <strong>小柴犬提醒：</strong>離線建索引與線上提問，<strong>一定要用同一個 Embedding 模型</strong>，否則座標系對不起來喔！
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/chunking-and-embeddings.md</code></span>
+        <span>原始資料：raw/02_embeddings_and_vector_db.md, raw/03</span>
+      </div>
+    </section>
+
+    <!-- Slide 6 -->
+    <section class="slide" data-slide="6" data-title="系統架構 I：離線索引階段" data-wiki-source="wiki/concepts/rag-pipeline.md">
+      <div class="slide-kicker">Part 3 · 系統架構 I</div>
+      <h2>RAG 階段一：離線索引（先把書架整理好）</h2>
+      <p class="lead">在系統上線前或新增檔案時執行，把雜亂的文件變成整齊可搜的向量圖書館：</p>
+      <div class="pipeline">
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c97a16" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <h4>1. Load 載入</h4>
+          <p>讀取 PDF、Markdown、網頁或資料庫原文。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c94c6d" stroke-width="2.2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/></svg>
+          </div>
+          <h4>2. Split 切分</h4>
+          <p>切成 Chunks，保留 Overlap 與 Metadata。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c5cbf" stroke-width="2.2"><polygon points="12 2 15 9 22 9 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9 9 9 12 2"/></svg>
+          </div>
+          <h4>3. Embed 嵌入</h4>
+          <p>用 Embedding 模型將每段文字轉為語意向量。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2f7d5d" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <h4>4. Store 儲存</h4>
+          <p>把「向量＋原文＋Metadata」存進向量資料庫。</p>
+        </div>
+      </div>
+      <div class="card matcha">
+        <h3>新手小筆記</h3>
+        <p>離線索引只需在<strong>資料新增或修改時</strong>執行，平常使用者問問題時不會重跑，因此回覆速度很快！</p>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/rag-pipeline.md</code></span>
+        <span>原始資料：raw/03_rag_pipeline_architecture.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 7 -->
+    <section class="slide" data-slide="7" data-title="系統架構 II：線上查詢與生成" data-wiki-source="wiki/concepts/rag-pipeline.md">
+      <div class="slide-kicker">Part 3 · 系統架構 II</div>
+      <h2>RAG 階段二：線上查詢與生成（即時開書作答）</h2>
+      <p class="lead">當使用者按下送出問題的那一刻，系統會在幾秒內依序完成以下 4 步：</p>
+      <div class="pipeline">
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c97a16" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <h4>1. Query Embed</h4>
+          <p>用同一套 Embedding 模型把問題轉成查詢向量。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c94c6d" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <h4>2. Retrieve Top-K</h4>
+          <p>撈出相似度最高的前 K 個段落（常見 K=3~5）。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c5cbf" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </div>
+          <h4>3. Prompt 增強</h4>
+          <p>組合「系統規範＋Top-K 參考段落＋問題」。</p>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="step-box">
+          <div class="step-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2f7d5d" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h4>4. LLM 生成</h4>
+          <p>要求 LLM 僅依參考資料作答，並附上出處。</p>
+        </div>
+      </div>
+      <div class="card butter">
+        <h3>調校小陷阱：Top-K 不是越大越好喔！</h3>
+        <p><code>Top-K</code> 太小會漏掉答案；設太大除了浪費 Token，還會塞入雜訊並觸發 <strong>Lost in the Middle</strong>（LLM 容易忽略長文章中間段的重點）。</p>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/rag-pipeline.md</code></span>
+        <span>原始資料：raw/03_rag_pipeline_architecture.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 8 -->
+    <section class="slide" data-slide="8" data-title="進階 RAG 三大優化技巧" data-wiki-source="wiki/concepts/advanced-rag-and-eval.md">
+      <div class="slide-kicker">Part 4 · 實務升級</div>
+      <h2>為什麼基礎 RAG 還是會答錯？三大進階法寶</h2>
+      <p class="lead">基礎版（Naive RAG）常因為「問得太口語」、「專有名詞／代碼漏抓」、「排序雜訊」而出錯，實務上會加上三層升級：</p>
+      <div class="grid-3">
+        <div class="card sky">
+          <h3>檢索前 · Query Rewriting</h3>
+          <p>先請 LLM 把含糊口語改寫成精確查詢句，或拆成多個子問題（Multi-Query），讓檢索更容易命中。</p>
+        </div>
+        <div class="card sakura">
+          <h3>檢索中 · Hybrid Search</h3>
+          <p>同時結合 <strong>BM25（關鍵字精確比對）</strong>＋<strong>向量語意搜尋</strong>，再用 RRF 融合排序，專治代碼與專有名詞（如 <code>ERR_4042</code>）漏抓。</p>
+        </div>
+        <div class="card lavender">
+          <h3>檢索後 · Reranking</h3>
+          <p>先快速粗篩 Top-20，再由更細緻的 Cross-encoder Reranker 重新打分，只把最精華的 Top-3～5 交給 LLM。</p>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/advanced-rag-and-eval.md</code></span>
+        <span>原始資料：raw/04_advanced_rag_and_evaluation.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 9 -->
+    <section class="slide" data-slide="9" data-title="RAGAS 三角評估指標" data-wiki-source="wiki/concepts/advanced-rag-and-eval.md">
+      <div class="slide-kicker">Part 4 · 品質量化體檢</div>
+      <h2>
+        <svg class="anim-sparkle" width="30" height="30" viewBox="0 0 36 36" aria-hidden="true">
+          <polygon points="18,3 22,13 33,14 25,21 27,32 18,26 9,32 11,21 3,14 14,13" fill="#ffd166" stroke="#c97a16" stroke-width="2" />
+        </svg>
+        怎麼幫 RAG 打分數？RAGAS 三角評估法
+      </h2>
+      <p class="lead">判斷 RAG 好不好不能只靠體感！業界常用 <strong>RAGAS（RAG Triad）</strong> 三大指標，快速定位是檢索壞了還是生成壞了：</p>
+      <div class="grid-3">
+        <div class="card matcha">
+          <h3>1. Context Precision<br /><small>檢索精準度</small></h3>
+          <p><strong>檢查：</strong>問題 ↔ 撈出的段落</p>
+          <p style="margin-top:6px;">撈回來的段落真的跟問題有關嗎？分數低代表切塊或檢索要調整。</p>
+        </div>
+        <div class="card butter">
+          <h3>2. Faithfulness<br /><small>忠實度</small></h3>
+          <p><strong>檢查：</strong>撈出的段落 ↔ 生成答案</p>
+          <p style="margin-top:6px;">LLM 有沒有 100% 忠於參考段落，沒有自己憑空腦補或幻覺？</p>
+        </div>
+        <div class="card sky">
+          <h3>3. Answer Relevance<br /><small>答案相關性</small></h3>
+          <p><strong>檢查：</strong>問題 ↔ 生成答案</p>
+          <p style="margin-top:6px;">最終答案是否直接、完整回答了使用者的原始問題？</p>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/concepts/advanced-rag-and-eval.md</code></span>
+        <span>原始資料：raw/04_advanced_rag_and_evaluation.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 10 -->
+    <section class="slide" data-slide="10" data-title="技術選型：四大方案比較" data-wiki-source="wiki/comparisons/rag-vs-alternatives.md">
+      <div class="slide-kicker">Part 5 · 技術選型指南</div>
+      <h2>四大知識增強方案，該怎麼選才對？</h2>
+      <p class="lead">依資料量大小、更新頻率與是否需要長期累積知識，選出最適合的工具：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>比較面向</th>
+            <th>RAG</th>
+            <th>Fine-tuning 微調</th>
+            <th>Long Context</th>
+            <th>LLM Wiki</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>知識整合時機</strong></td>
+            <td>查詢當下臨時檢索</td>
+            <td>訓練階段寫入權重</td>
+            <td>每次整份塞進 Prompt</td>
+            <td class="wiki-col">匯入時預先編譯</td>
+          </tr>
+          <tr>
+            <td><strong>資料更新速度</strong></td>
+            <td>快（更新向量庫）</td>
+            <td>慢且昂貴（需重訓）</td>
+            <td>極快（直接換檔）</td>
+            <td class="wiki-col">快（增量更新 MD）</td>
+          </tr>
+          <tr>
+            <td><strong>來源可追溯性</strong></td>
+            <td>高（附 Chunk 出處）</td>
+            <td>低（黑箱權重）</td>
+            <td>中（需模型標註）</td>
+            <td class="wiki-col">極高（雙向連結）</td>
+          </tr>
+          <tr>
+            <td><strong>知識是否累積</strong></td>
+            <td>否（無狀態重撈）</td>
+            <td>固定於權重內</td>
+            <td>否（單次對話）</td>
+            <td class="wiki-col">是（結構持續成長）</td>
+          </tr>
+          <tr>
+            <td><strong>最佳適用場景</strong></td>
+            <td>百萬級變動文件搜尋</td>
+            <td>調整語氣、固定格式</td>
+            <td>單次閱讀少數長文</td>
+            <td class="wiki-col">研究筆記、教學知識庫</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/comparisons/rag-vs-alternatives.md</code></span>
+        <span>原始資料：raw/05_rag_vs_finetuning_vs_llm_wiki.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 11 -->
+    <section class="slide" data-slide="11" data-title="傳統 RAG vs. LLM Wiki" data-wiki-source="wiki/comparisons/rag-vs-alternatives.md">
+      <div class="slide-kicker">Part 5 · 本週課程亮點</div>
+      <h2>傳統 RAG vs. LLM Wiki：兩種知識哲學大對決</h2>
+      <p class="lead">這份可愛簡報本身就是從 <strong>LLM Wiki</strong> 編譯出來的！看看它和傳統 RAG 差在哪裡：</p>
+      <div class="grid-2">
+        <div class="card sky">
+          <h3>傳統 RAG：查詢時才臨時拼湊</h3>
+          <ul>
+            <li>屬於<strong>無狀態（Stateless）檢索</strong>。</li>
+            <li>每次提問才臨時把零碎段落抓出來拼出答案。</li>
+            <li>問完就忘，知識庫本身不會變更有結構，也不容易發現跨文件矛盾。</li>
+            <li><strong>超強優勢</strong>：處理數十萬～百萬份海量動態文件時無可取代。</li>
+          </ul>
+        </div>
+        <div class="card matcha">
+          <h3>LLM Wiki：寫入時就預先編譯</h3>
+          <ul>
+            <li>由 Andrej Karpathy 提倡，把 LLM 當成「知識編譯器」。</li>
+            <li>每次 <code>Ingest</code> 新文章，就主動整理進 <code>wiki/</code>、連上 <code>[[wikilink]]</code> 與記錄 <code>log.md</code>。</li>
+            <li><strong>知識會產生複利</strong>，人類與 AI 都能直接閱讀、審查與版控（Git）。</li>
+            <li><strong>超強優勢</strong>：深度研究、課程學習、個人／團隊活知識庫。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/comparisons/rag-vs-alternatives.md</code></span>
+        <span>原始資料：raw/05_rag_vs_finetuning_vs_llm_wiki.md</span>
+      </div>
+    </section>
+
+    <!-- Slide 12 -->
+    <section class="slide" data-slide="12" data-title="互動隨堂小測驗與總結" data-wiki-source="wiki/index.md">
+      <div class="slide-kicker">Part 6 · 學習驗收小遊戲</div>
+      <h2>柴犬小測驗（點選答案，答對有驚喜！）</h2>
+
+      <div class="quiz-item">
+        <div class="quiz-q">Q1. 為什麼切塊（Chunking）時通常要設定 10%～20% 的 Overlap？</div>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="false" data-msg="差一點點！Overlap 會稍微多占空間，主要是保護語意完整性（複習：chunking-and-embeddings.md）。">A. 節省向量資料庫空間</button>
+          <button class="quiz-opt" data-correct="true" data-msg="答對了！避免關鍵句子剛好在切塊邊界被腰斬，保留前後文脈絡！">B. 避免關鍵句子被切斷導致語意遺失</button>
+          <button class="quiz-opt" data-correct="false" data-msg="不對喔！微調模型權重是 Fine-tuning，和 Chunk Overlap 無關。">C. 讓 LLM 重新微調模型權重</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <div class="quiz-item">
+        <div class="quiz-q">Q2. 使用者常搜尋精確型號或錯誤代碼（如 ERR_4042）卻撈不到，最該加入哪項優化？</div>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="true" data-msg="答對了！Hybrid Search 結合 BM25 關鍵字與向量搜尋，最擅長解決專有名詞與編號漏抓！">A. Hybrid Search（BM25 + 向量混合檢索）</button>
+          <button class="quiz-opt" data-correct="false" data-msg="小心陷阱！Top-K 設太大會塞入雜訊並觸發 Lost in the Middle 問題。">B. 把 Top-K 調大到 100</button>
+          <button class="quiz-opt" data-correct="false" data-msg="不行喔！線上查詢改換不同 Embedding 模型會讓座標空間完全對不起來！">C. 線上查詢改換另一個 Embedding 模型</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <div class="quiz-item">
+        <div class="quiz-q">Q3. RAGAS 三角指標中，哪一項專門檢查「LLM 有沒有脫離參考段落自己亂編」？</div>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="false" data-msg="差一點！Context Precision 檢查的是「撈出來的段落跟問題相不相關」。">A. Context Precision</button>
+          <button class="quiz-opt" data-correct="true" data-msg="答對了！Faithfulness（忠實度）專門檢驗答案是否 100% 忠於參考段落，沒有幻覺！">B. Faithfulness（忠實度）</button>
+          <button class="quiz-opt" data-correct="false" data-msg="不對喔！Chunk Overlap 是切塊參數，不是 RAGAS 評估指標。">C. Chunk Overlap</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <div class="wiki-badge">
+        <span>Wiki 對應來源：<code>wiki/index.md</code>（全站總覽）</span>
+        <span>太棒了！完成 RAG 新手入門小教室</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Corner Mini Shiba Helper -->
+  <div class="mini-helper" id="miniHelper" title="點我可以跳下一頁喔！">
+    <div class="helper-bubble" id="helperBubble">點我也可以翻下一頁喔！</div>
+    <svg width="56" height="54" viewBox="0 0 80 76" aria-hidden="true">
+      <path d="M20 28 L15 10 L32 20 Z" fill="#e6a15c" stroke="#4a3831" stroke-width="2.5" stroke-linejoin="round" />
+      <path d="M60 28 L65 10 L48 20 Z" fill="#e6a15c" stroke="#4a3831" stroke-width="2.5" stroke-linejoin="round" />
+      <ellipse cx="40" cy="42" rx="26" ry="22" fill="#f0b272" stroke="#4a3831" stroke-width="2.5" />
+      <path d="M17 45 Q26 37 40 43 Q54 37 63 45 Q60 62 40 63 Q20 62 17 45 Z" fill="#fffaf4" />
+      <circle cx="31" cy="40" r="2.8" fill="#4a3831" />
+      <circle cx="49" cy="40" r="2.8" fill="#4a3831" />
+      <ellipse cx="23" cy="47" rx="4" ry="2.2" fill="#ffb3c6" />
+      <ellipse cx="57" cy="47" rx="4" ry="2.2" fill="#ffb3c6" />
+      <ellipse cx="40" cy="46" rx="2.8" ry="2" fill="#4a3831" />
+      <path d="M36 50 Q40 53 44 50" fill="none" stroke="#4a3831" stroke-width="2" stroke-linecap="round" />
+    </svg>
+  </div>
+
+  <footer class="footer-nav">
+    <button class="btn" id="prevBtn" type="button">← 上一頁</button>
+    <span class="hint">可使用鍵盤 ← / → / Space 切換投影片</span>
+    <button class="btn" id="nextBtn" type="button">下一頁 →</button>
+  </footer>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const progressFill = document.getElementById('progressFill');
+    const pageCounter = document.getElementById('pageCounter');
+    const tocBtn = document.getElementById('tocBtn');
+    const tocDrawer = document.getElementById('tocDrawer');
+    const tocList = document.getElementById('tocList');
+    const miniHelper = document.getElementById('miniHelper');
+    const helperBubble = document.getElementById('helperBubble');
+    let current = 0;
+
+    const helperTips = [
+      '歡迎來到 RAG 小教室！',
+      '純 LLM 也有三個小弱點喔～',
+      '開書考試超好懂對吧！',
+      '切塊記得留點重疊區喔！',
+      'Embedding 把意思變成座標～',
+      '離線先把圖書館整理好！',
+      'Top-K 不要設太大喔！',
+      '三大進階法寶超實用！',
+      'RAGAS 幫系統做健康檢查！',
+      '選對工具事半功倍～',
+      'LLM Wiki 越用越聰明！',
+      '挑戰三題小測驗吧！'
+    ];
+
+    function renderToc() {
+      tocList.innerHTML = '';
+      slides.forEach((slide, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'toc-item' + (idx === current ? ' active' : '');
+        btn.textContent = `${idx + 1}. ${slide.dataset.title}`;
+        btn.addEventListener('click', () => {
+          goTo(idx);
+          tocDrawer.classList.remove('open');
+        });
+        tocList.appendChild(btn);
+      });
+    }
+
+    function goTo(index) {
+      if (index < 0 || index >= slides.length) return;
+      slides[current].classList.remove('active');
+      current = index;
+      slides[current].classList.add('active');
+      pageCounter.textContent = `${current + 1} / ${slides.length}`;
+      progressFill.style.width = `${((current + 1) / slides.length) * 100}%`;
+      helperBubble.textContent = helperTips[current] || '繼續加油喔！';
+      renderToc();
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+    tocBtn.addEventListener('click', () => tocDrawer.classList.toggle('open'));
+    miniHelper.addEventListener('click', () => goTo((current + 1) % slides.length));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        goTo(current + 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goTo(current - 1);
+      } else if (e.key === 'Escape') {
+        tocDrawer.classList.remove('open');
+      }
+    });
+
+    // Interactive Quiz with Kawaii Sparkle Burst
+    document.querySelectorAll('.quiz-item').forEach((item) => {
+      const buttons = item.querySelectorAll('.quiz-opt');
+      const feedback = item.querySelector('.quiz-feedback');
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          buttons.forEach((b) => b.classList.remove('correct', 'wrong'));
+          const isCorrect = btn.dataset.correct === 'true';
+          btn.classList.add(isCorrect ? 'correct' : 'wrong');
+          feedback.textContent = btn.dataset.msg;
+          feedback.style.color = isCorrect ? '#266a4e' : '#c94c6d';
+
+          if (isCorrect) {
+            const burst = document.createElement('span');
+            burst.className = 'spark-burst';
+            burst.textContent = '★ ✦ ★';
+            burst.style.color = '#f6bd60';
+            item.appendChild(burst);
+            setTimeout(() => burst.remove(), 950);
+          }
+        });
+      });
+    });
+
+    renderToc();
+  </script>
+</body>
+</html>

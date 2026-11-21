@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Wiki → 教學 HTML 簡報：Loop / Graph 流程圖</title>
+  <style>
+    :root {
+      --bg: #fff9f2;
+      --paper: #fffdf9;
+      --cocoa: #4a3831;
+      --cocoa-soft: #7c675e;
+      --sakura: #e0577c;
+      --sakura-soft: #ffe5ec;
+      --matcha: #2f7d5d;
+      --matcha-soft: #e6f7ef;
+      --butter: #c97a16;
+      --butter-soft: #fff4d6;
+      --sky: #3678ad;
+      --sky-soft: #e6f4ff;
+      --border: #f0dfd1;
+      --error: #d64545;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(#f3d7c3 1.2px, transparent 1.2px),
+        radial-gradient(#ffe0e9 1.2px, var(--bg) 1.2px);
+      background-size: 28px 28px;
+      background-position: 0 0, 14px 14px;
+      color: var(--cocoa);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .sheet {
+      width: 100%;
+      max-width: 1040px;
+      background: var(--paper);
+      border: 3px solid var(--border);
+      border-radius: 26px;
+      padding: 28px 34px;
+      box-shadow: 0 14px 34px rgba(133, 94, 66, 0.10), 0 6px 0 #f3e1d3;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 2px dashed var(--border);
+      margin-bottom: 18px;
+    }
+    .header h1 { font-size: 1.35rem; color: var(--cocoa); }
+    .legend {
+      display: flex;
+      gap: 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cocoa-soft);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
+
+    .svg-wrap { width: 100%; overflow-x: auto; }
+    svg { width: 100%; height: auto; display: block; }
+    .node { cursor: pointer; transition: opacity 0.15s ease; }
+    .node:hover { opacity: 0.88; }
+    .node.selected rect { stroke-width: 3.2; }
+
+    .detail-box {
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: #fffaf4;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .detail-title { font-size: 0.96rem; font-weight: 800; color: var(--sakura); margin-bottom: 4px; }
+    .detail-desc { font-size: 0.88rem; color: var(--cocoa-soft); line-height: 1.6; }
+    .detail-hint { font-size: 0.78rem; color: var(--cocoa-soft); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <div class="header">
+      <h1>LLM Wiki → 教學 HTML 簡報：雙迴圈 + 三道 Gate 流程圖</h1>
+      <div class="legend">
+        <span><i class="dot" style="background:#72b5e8;"></i>執行節點</span>
+        <span><i class="dot" style="background:#f6bd60;"></i>檢查 Gate</span>
+        <span><i class="dot" style="background:#68b896;"></i>完成輸出</span>
+      </div>
+    </div>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 860 306" role="img" aria-label="Loop and Graph Flowchart">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#7c675e" />
+          </marker>
+          <marker id="arrowWarn" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#d64545" />
+          </marker>
+          <marker id="arrowLoop" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3678ad" />
+          </marker>
+          <marker id="arrowOk" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#2f7d5d" />
+          </marker>
+        </defs>
+
+        <!-- Group Background: Loop 1 -->
+        <rect x="172" y="10" width="668" height="124" rx="14" fill="#fffaf4" stroke="#f0dfd1" stroke-width="2" stroke-dasharray="6 4" />
+        <text x="184" y="27" font-size="11.5" font-weight="800" fill="#3678ad">Loop 1：知識增量匯入與結構檢查迴圈（重複 5 次）</text>
+
+        <!-- Group Background: Loop 2 -->
+        <rect x="12" y="158" width="828" height="136" rx="14" fill="#fffaf4" stroke="#f0dfd1" stroke-width="2" stroke-dasharray="6 4" />
+        <text x="24" y="175" font-size="11.5" font-weight="800" fill="#2f7d5d">Loop 2：簡報大綱前置檢查、生成與來源稽核迴圈</text>
+
+        <!-- ROW 1 EDGES -->
+        <line x1="154" y1="74" x2="188" y2="74" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+        <line x1="346" y1="74" x2="380" y2="74" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+        <line x1="556" y1="74" x2="594" y2="74" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+
+        <!-- Loop back: Gate 1 -> 3 -->
+        <path d="M 702 44 L 702 33 L 468 33 L 468 44" fill="none" stroke="#d64545" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrowWarn)" />
+        <text x="585" y="29" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d64545">未通過：修補 Wiki / 規則</text>
+
+        <!-- Loop back: Gate 1 -> 2 -->
+        <path d="M 672 104 L 672 122 L 268 122 L 268 104" fill="none" stroke="#3678ad" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrowLoop)" />
+        <text x="470" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3678ad">通過但未滿 5 篇：繼續匯入下一篇</text>
+
+        <!-- Transition: Gate 1 -> 4 -->
+        <path d="M 738 104 L 738 146 L 96 146 L 96 190" fill="none" stroke="#2f7d5d" stroke-width="2.2" marker-end="url(#arrowOk)" />
+        <text x="415" y="142" text-anchor="middle" font-size="11" font-weight="800" fill="#2f7d5d">5 篇全部通過 Gate 1</text>
+
+        <!-- ROW 2 EDGES -->
+        <line x1="168" y1="222" x2="198" y2="222" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+        <line x1="342" y1="222" x2="372" y2="222" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+        <line x1="518" y1="222" x2="548" y2="222" stroke="#7c675e" stroke-width="2" marker-end="url(#arrow)" />
+        <line x1="694" y1="222" x2="722" y2="222" stroke="#2f7d5d" stroke-width="2.2" marker-end="url(#arrowOk)" />
+
+        <!-- Loop back: Gate 2 -> 4 -->
+        <path d="M 270 252 L 270 278 L 96 278 L 96 252" fill="none" stroke="#d64545" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrowWarn)" />
+        <text x="183" y="274" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d64545">漏頁/順序不佳：重排</text>
+
+        <!-- Loop back: Gate 3 -> 5 -->
+        <path d="M 621 252 L 621 278 L 445 278 L 445 252" fill="none" stroke="#d64545" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrowWarn)" />
+        <text x="533" y="274" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d64545">來源錯誤/漏頁：重生成</text>
+
+        <!-- NODES ROW 1 -->
+        <g class="node selected" data-id="n1">
+          <rect x="14" y="46" width="140" height="56" rx="12" fill="#e6f4ff" stroke="#72b5e8" stroke-width="2" />
+          <text x="84" y="68" text-anchor="middle" font-size="12" font-weight="800" fill="#4a3831">1. 先討論、定 Schema</text>
+          <text x="84" y="86" text-anchor="middle" font-size="10.5" fill="#7c675e">SCHEMA.md</text>
+        </g>
+
+        <g class="node" data-id="n2">
+          <rect x="190" y="46" width="156" height="56" rx="12" fill="#e6f4ff" stroke="#72b5e8" stroke-width="2" />
+          <text x="268" y="68" text-anchor="middle" font-size="12" font-weight="800" fill="#4a3831">2. 取得原始資料</text>
+          <text x="268" y="86" text-anchor="middle" font-size="10.5" fill="#7c675e">raw/ 01 ~ 05 (5 篇)</text>
+        </g>
+
+        <g class="node" data-id="n3">
+          <rect x="382" y="46" width="174" height="56" rx="12" fill="#e6f4ff" stroke="#72b5e8" stroke-width="2" />
+          <text x="469" y="68" text-anchor="middle" font-size="12" font-weight="800" fill="#4a3831">3. Ingest 編譯進 Wiki</text>
+          <text x="469" y="86" text-anchor="middle" font-size="10.5" fill="#7c675e">wiki/ 6 頁 + log.md</text>
+        </g>
+
+        <g class="node" data-id="g1">
+          <rect x="596" y="44" width="212" height="60" rx="14" fill="#fff4d6" stroke="#f6bd60" stroke-width="2.2" />
+          <text x="702" y="67" text-anchor="middle" font-size="12" font-weight="800" fill="#9c6a12">Gate 1：Wiki Lint 檢查</text>
+          <text x="702" y="85" text-anchor="middle" font-size="10" fill="#7c675e">Frontmatter / 斷鏈 / 孤兒頁</text>
+        </g>
+
+        <!-- NODES ROW 2 -->
+        <g class="node" data-id="n4">
+          <rect x="24" y="192" width="144" height="58" rx="12" fill="#e6f4ff" stroke="#72b5e8" stroke-width="2" />
+          <text x="96" y="215" text-anchor="middle" font-size="12" font-weight="800" fill="#4a3831">4. 查詢 Wiki 排大綱</text>
+          <text x="96" y="233" text-anchor="middle" font-size="10.5" fill="#7c675e">規劃 12 頁教學順序</text>
+        </g>
+
+        <g class="node" data-id="g2">
+          <rect x="200" y="192" width="142" height="58" rx="14" fill="#fff4d6" stroke="#f6bd60" stroke-width="2.2" />
+          <text x="271" y="215" text-anchor="middle" font-size="12" font-weight="800" fill="#9c6a12">Gate 2：大綱檢查</text>
+          <text x="271" y="233" text-anchor="middle" font-size="10" fill="#7c675e">前置確認 100% 覆蓋</text>
+        </g>
+
+        <g class="node" data-id="n5">
+          <rect x="374" y="192" width="144" height="58" rx="12" fill="#e6f4ff" stroke="#72b5e8" stroke-width="2" />
+          <text x="446" y="215" text-anchor="middle" font-size="12" font-weight="800" fill="#4a3831">5. 生成 HTML 簡報</text>
+          <text x="446" y="233" text-anchor="middle" font-size="10.5" fill="#7c675e">slides/index.html</text>
+        </g>
+
+        <g class="node" data-id="g3">
+          <rect x="550" y="192" width="144" height="58" rx="14" fill="#fff4d6" stroke="#f6bd60" stroke-width="2.2" />
+          <text x="622" y="215" text-anchor="middle" font-size="12" font-weight="800" fill="#9c6a12">Gate 3：來源稽核</text>
+          <text x="622" y="233" text-anchor="middle" font-size="10" fill="#7c675e">驗證 data-wiki-source</text>
+        </g>
+
+        <g class="node" data-id="n6">
+          <rect x="724" y="192" width="106" height="58" rx="12" fill="#e6f7ef" stroke="#68b896" stroke-width="2.2" />
+          <text x="777" y="215" text-anchor="middle" font-size="12" font-weight="800" fill="#266a4e">6. 輸出報告</text>
+          <text x="777" y="233" text-anchor="middle" font-size="10" fill="#2f7d5d">ALL PASSED</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="detail-box">
+      <div>
+        <div id="detailTitle" class="detail-title">1. 先討論、定 Schema（SCHEMA.md）</div>
+        <div id="detailDesc" class="detail-desc">
+          確認主題為 RAG（檢索增強生成），先制定 SCHEMA.md 規範目錄、YAML Frontmatter、[[wikilink]] 雙向連結與簡報對應欄位，避免後續格式混亂。
+        </div>
+      </div>
+      <span class="detail-hint">點擊上方節點查看細節</span>
+    </div>
+  </main>
+
+  <script>
+    const info = {
+      n1: {
+        title: '1. 先討論、定 Schema（SCHEMA.md）',
+        desc: '確認主題為 RAG（檢索增強生成），先制定 SCHEMA.md 規範目錄、YAML Frontmatter、[[wikilink]] 雙向連結與簡報對應欄位，避免後續格式混亂。'
+      },
+      n2: {
+        title: '2. 取得原始資料（raw/ 01 ~ 05）',
+        desc: '保持 raw/ 原始文件不可變原則，依序放入 5 篇涵蓋論文、向量嵌入、雙階段架構、進階 RAGAS 與 LLM Wiki 對比的原始資料。'
+      },
+      n3: {
+        title: '3. Ingest 編譯進 Wiki（wiki/ + log.md）',
+        desc: '每次匯入 1 篇即主動編譯整合進 6 個 Wiki 頁面、補齊雙向連結並記錄至 log.md，而非單純堆放摘要。'
+      },
+      g1: {
+        title: 'Gate 1：Wiki Lint 自動檢查（曾於第 1 次執行抓到誤報！）',
+        desc: '由 run_pipeline_check 腳本檢查 Frontmatter、raw 來源存在性、斷鏈與孤兒頁。第 1 次執行抓到行內程式碼 `[[wikilink]]` 誤判，修正規則後第 2 次全部通過。'
+      },
+      n4: {
+        title: '4. 查詢 Wiki 並規劃教學大綱',
+        desc: '僅以 wiki/ 作為知識來源，依新手認知順序規劃 12 頁教學簡報（痛點 → 類比 → 原理 → 架構 → 進階評估 → 選型與測驗）。'
+      },
+      g2: {
+        title: 'Gate 2：大綱與覆蓋率前置檢查（往前移的關鍵關卡）',
+        desc: '在真正撰寫 HTML 前先核對「6 頁 Wiki ↔ 12 頁簡報」對應表，避免寫完簡報才發現漏掉概念或順序跳躍。'
+      },
+      n5: {
+        title: '5. 生成教學 HTML 簡報（slides/index.html）',
+        desc: '製作單檔離線可瀏覽的日式可愛風互動簡報，每張投影片皆內嵌 data-wiki-source 屬性與頁尾來源徽章。'
+      },
+      g3: {
+        title: 'Gate 3：簡報與 Wiki 對應稽核',
+        desc: '自動解析 slides/index.html 全部 12 張投影片，確認每頁 data-wiki-source 皆指向真實存在的 Wiki 頁，且覆蓋率達 6/6（100%）。'
+      },
+      n6: {
+        title: '6. 輸出執行報告與日誌（ALL PASSED）',
+        desc: '自動產出 workflow/execution_report.md 與 12 頁對應明細表，並同步更新 log.md，完成可追溯的閉環流程。'
+      }
+    };
+
+    const nodes = document.querySelectorAll('.node');
+    const titleEl = document.getElementById('detailTitle');
+    const descEl = document.getElementById('detailDesc');
+
+    nodes.forEach((node) => {
+      node.addEventListener('click', () => {
+        nodes.forEach((n) => n.classList.remove('selected'));
+        node.classList.add('selected');
+        const item = info[node.dataset.id];
+        if (item) {
+          titleEl.textContent = item.title;
+          descEl.textContent = item.desc;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
